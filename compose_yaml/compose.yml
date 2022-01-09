@@ -1,0 +1,96 @@
+version: "3"
+
+# docker-compose up -d <nombre_servicio>
+
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    command: --api.insecure=true --providers.docker
+    ports:
+      - 80:80
+      - 8090:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /share/DockerVolumes/traefik:/etc/traefik/
+
+  homer:
+    image: b4bz/homer:latest
+    container_name: homer
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    ports:
+      - 8082:8080
+    volumes:
+      - /share/DockerVolumes/homer/assets/:/www/assets
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.homer.rule=Host(`homer.casa`)"
+
+  uptime:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    ports:
+      - 3001:3001
+    volumes:
+      - /share/DockerVolumes/uptime:/app/data
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.uptime.rule=Host(`uptime.casa`)"
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /share/DockerVolumes/portainer:/data
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.portainer.rule=Host(`portainer.casa`)"
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    ports:
+      - 8086:8086
+    volumes:
+      - /share/DockerVolumes/influxdb:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=cloud
+      - INFLUXDB_READ_USER=read
+      - INFLUXDB_READ_USER_PASSWORD=readonly
+      - INFLUXDB_WRITE_USER=write
+      - INFLUXDB_WRITE_USER_PASSWORD=readwrite
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+      - INFLUXDB_HTTP_ENABLED=true
+      - INFLUXDB_HTTP_HTTPS_ENABLED=false
+      - INFLUXDB_HTTP_AUTH_ENABLED=true
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    user: "0"
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    ports:
+      - 3000:3000
+    volumes:
+      - /share/DockerVolumes/grafana/:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD='admin'
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.casa`)
