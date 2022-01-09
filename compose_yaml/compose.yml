@@ -11,7 +11,7 @@ services:
     command: --api.insecure=true --providers.docker
     ports:
       - 80:80
-      - 8090:8080
+      - 8090:8090
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /share/DockerVolumes/traefik:/etc/traefik/
